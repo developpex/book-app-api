@@ -1,7 +1,7 @@
 """
 Views for the Book APIs
 """
-
+from drf_spectacular.utils import extend_schema
 from rest_framework import (
     viewsets,
 )
@@ -12,6 +12,7 @@ from book import serializers
 from core.models import Book
 
 
+@extend_schema(tags=["Book"])
 class BookViewSet(viewsets.ModelViewSet):
     """View for manage book Api"""
 
