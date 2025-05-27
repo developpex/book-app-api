@@ -9,7 +9,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from book import serializers
-from core.models import Book
+from book.models import Book
 
 
 @extend_schema(tags=["Book"])
@@ -33,4 +33,5 @@ class BookViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user).order_by("-id")
 
     def perform_create(self, serializer):
+        """Save a new book for the authenticated user."""
         serializer.save(user=self.request.user)

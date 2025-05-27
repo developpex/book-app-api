@@ -4,7 +4,7 @@ Serializers for book APIs
 
 from rest_framework import serializers
 
-from core.models import (
+from book.models import (
     Book
 )
 

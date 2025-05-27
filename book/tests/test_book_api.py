@@ -9,11 +9,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from book.models import (
+    Book
+)
 from book.serializers import (
     BookSerializer, BookDetailSerializer
-)
-from core.models import (
-    Book
 )
 
 BOOK_URL = reverse("book:book-list")
