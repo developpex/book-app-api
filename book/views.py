@@ -1,7 +1,9 @@
 """
 Views for the Book APIs
 """
-from drf_spectacular.utils import extend_schema
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework import (
     viewsets,
@@ -12,10 +14,25 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from book import serializers
+from book.filters import BookFilter
 from book.models import Book
 
 
-@extend_schema(tags=["Book"])
+@extend_schema(
+    tags=["Book"],
+    parameters=[
+        OpenApiParameter(
+            "genres",
+            OpenApiTypes.STR,
+            description="Comma-separated list of genre names to filter",
+        ),
+        OpenApiParameter(
+            "authors",
+            OpenApiTypes.STR,
+            description="Comma-separated list of author names to filter",
+        )
+    ]
+)
 class BookViewSet(viewsets.ModelViewSet):
     """View for manage book Api"""
 
@@ -23,6 +40,8 @@ class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = BookFilter
 
     def get_serializer_class(self):
         """Return the serializer class for requests."""
@@ -32,8 +51,8 @@ class BookViewSet(viewsets.ModelViewSet):
         return self.serializer_class
 
     def get_queryset(self):
-        """Retrieve books for authenticated users."""
-        return self.queryset.filter(user=self.request.user).order_by("-id")
+        """Retrieve books for authenticated users, filtered by user, distinct."""
+        return self.queryset.filter(user=self.request.user).order_by("-id").distinct()
 
     def perform_create(self, serializer):
         """Save a new book for the authenticated user."""
