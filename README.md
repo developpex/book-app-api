@@ -54,3 +54,32 @@ You can authorize your requests directly in the Swagger interface:
   ```
 4. **Click Authorize and then Close**  
   your token will now be used for all protected endpoints.
+
+## Continuous Integration
+
+This project uses **GitHub Actions** for automated testing and CI/CD.
+
+### Workflow Features
+
+- Runs on every push and pull request to `main`
+- Automatically installs dependencies
+- Runs Django tests
+- Ensures code quality before merging
+
+### Workflow File
+
+The GitHub Actions workflow is defined in:   
+   .github/workflows/ci.yml
+
+### How It Works
+
+On every push request, GitHub will:
+
+1. Set up Python environment
+2. Install project dependencies from `requirements.txt`
+3. Setup a database
+4. Run Django tests using `python manage.py test`
+
+This helps catch errors early and ensures the codebase remains stable.
+
+
