@@ -28,14 +28,14 @@ This API uses **Token Authentication**.
 
 1. **Register a New User**  
    Send a `POST` request to:
-   /api/user/create/
+   `/api/user/create/`
 
 
 2. **Obtain a Token**  
 After registering, obtain your token with a `POST` request to:
-/api/user/token/
+`/api/user/token/`
 
-Provide your `username` and `password` in the request body. You’ll receive a token like this:
+Provide your `email` and `password` in the request body. You’ll receive a token like this:
 
 ```json
 {
@@ -69,7 +69,7 @@ This project uses **GitHub Actions** for automated testing and CI/CD.
 ### Workflow File
 
 The GitHub Actions workflow is defined in:   
-   .github/workflows/ci.yml
+   `.github/workflows/ci.yml`
 
 ### How It Works
 
