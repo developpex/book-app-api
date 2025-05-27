@@ -18,3 +18,12 @@ class ModelTest(TestCase):
         )
 
         self.assertEqual(str(genre), genre.name)
+
+    def test_crate_author(self):
+        """Test create author"""
+
+        author = models.Author.objects.create(
+            name="Author"
+        )
+
+        self.assertEqual(str(author), author.name)

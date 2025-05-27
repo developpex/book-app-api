@@ -16,7 +16,7 @@ class Book(models.Model):
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=5, decimal_places=2)
     link = models.CharField(max_length=255)
-    genre = models.ManyToManyField("catalog.Genre")
+    genres = models.ManyToManyField("catalog.Genre")
 
     def __str__(self):
         return self.title

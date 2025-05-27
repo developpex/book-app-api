@@ -15,6 +15,7 @@ from book.models import (
 from book.serializers import (
     BookSerializer, BookDetailSerializer
 )
+from catalog.models import Genre
 
 BOOK_URL = reverse("book:book-list")
 
@@ -198,3 +199,152 @@ class PrivateBookAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
         self.assertTrue(Book.objects.filter(id=book.id).exists())
+
+    def test_create_book_with_new_genres(self):
+        """Test creating a book with new genres"""
+        payload = {
+            "title": "New book title",
+            "link": "https://example.com/new-book.pdf",
+            "description": "New book description",
+            "price": Decimal("2.50"),
+            "genres": [
+                {"name": "Fantasy"},
+                {"name": "History"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        books = Book.objects.filter(user=self.user)
+        self.assertEqual(books.count(), 1)
+
+        book = books[0]
+        self.assertEqual(book.genres.count(), 2)
+
+        for genre in payload["genres"]:
+            genre_exist = book.genres.filter(
+                name=genre["name"].strip().title()
+            ).exists()
+            self.assertTrue(genre_exist)
+
+    def test_create_book_with_existing_genres(self):
+        """Test Creating a recipe with an existing genre"""
+        fantasy_genre = Genre.objects.create(name="Fantasy")
+        payload = {
+            "title": "New book title",
+            "link": "https://example.com/new-book.pdf",
+            "description": "New book description",
+            "price": Decimal("2.50"),
+            "genres": [
+                {"name": "Fantasy"},
+                {"name": "History"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        books = Book.objects.filter(user=self.user)
+        self.assertEqual(books.count(), 1)
+
+        book = books[0]
+        self.assertEqual(book.genres.count(), 2)
+        self.assertIn(fantasy_genre, book.genres.all())
+
+        for genre in payload["genres"]:
+            genre_exist = book.genres.filter(
+                name=genre["name"].strip().title()
+            ).exists()
+            self.assertTrue(genre_exist)
+
+    def test_genre_name_normalization_on_book_create(self):
+        """Test that genre names are normalized on creation."""
+        payload = {
+            "title": "Normalize Test Book",
+            "link": "https://example.com/book.pdf",
+            "description": "Testing genre normalization",
+            "price": Decimal("3.00"),
+            "genres": [
+                {"name": "  fantasy  "},
+                {"name": "HISTORY"},
+                {"name": "sCiEncE fICtioN"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        expected_names = ["Fantasy", "History", "Science Fiction"]
+        for name in expected_names:
+            exists = Genre.objects.filter(name=name).exists()
+            self.assertTrue(exists)
+
+    def test_reuse_normalized_genre(self):
+        """Test that existing normalized genre is reused."""
+        Genre.objects.create(name="Fantasy")
+
+        payload = {
+            "title": "Another Book",
+            "link": "https://example.com/book.pdf",
+            "description": "Reuse genre test",
+            "price": Decimal("5.00"),
+            "genres": [
+                {"name": "  FANtAsY "}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Genre.objects.filter(name__iexact="fantasy").count(), 1)
+
+    def test_create_genre_on_update(self):
+        """Test creating a genre on an update of the book"""
+        book = create_book(user=self.user)
+        payload = {
+            "genres": [{"name": "Fantasy"}]
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        new_genre = Genre.objects.get(name="Fantasy")
+        self.assertIn(new_genre, book.genres.all())
+
+    def test_get_existing_genre_on_update(self):
+        """Test getting existing genre when updating a book"""
+        genre = Genre.objects.create(name="Fantasy")
+        book = create_book(user=self.user)
+        book.genres.add(genre)
+
+        new_genre = Genre.objects.create(name="History")
+        payload = {
+            "genres": [{"name": "History"}]
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        book.refresh_from_db()
+        self.assertIn(new_genre, book.genres.all())
+        self.assertNotIn(genre, book.genres.all())
+
+    def test_clear_book_genres(self):
+        """Test clearing a recipes genres"""
+        genre = Genre.objects.create(name="Fantasy")
+        book = create_book(user=self.user)
+        book.genres.add(genre)
+
+        payload = {
+            "genres": []
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        book.refresh_from_db()
+        self.assertEqual(book.genres.count(), 0)
