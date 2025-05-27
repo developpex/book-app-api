@@ -77,7 +77,7 @@ class BookDetailSerializer(BookSerializer):
     """Serializer for book detail view"""
 
     class Meta(BookSerializer.Meta):
-        fields = BookSerializer.Meta.fields + ["description"]
+        fields = BookSerializer.Meta.fields + ["description", "image"]
 
 
 class BookImageSerializer(serializers.ModelSerializer):
