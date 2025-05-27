@@ -1,12 +1,15 @@
 """
 Test for book models.
 """
+import os
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from book import models
+from book.models import book_image_file_path
 
 
 def create_user(email="user@example.com", password="testpass123"):
@@ -33,3 +36,13 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(book), book.title)
+
+    @patch("book.models.uuid.uuid4")
+    def test_book_image_file_path(self, mock_uuid):
+        """Test that image is saved in the correct location"""
+        uuid = "test-uuid"
+        mock_uuid.return_value = uuid
+        file_path = book_image_file_path(None, "example.jpg")
+
+        expected_path = os.path.join("uploads", "book", f"{uuid}.jpg")
+        self.assertEqual(file_path, expected_path)
