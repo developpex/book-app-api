@@ -7,6 +7,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
 from book import models as book_models
+from catalog import models as catalog_models
 from core import models as core_models
 
 
@@ -47,3 +48,5 @@ class UserAdmin(BaseUserAdmin):
 
 admin.site.register(core_models.User, UserAdmin)
 admin.site.register(book_models.Book)
+admin.site.register(catalog_models.Author)
+admin.site.register(catalog_models.Genre)
