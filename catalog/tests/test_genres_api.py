@@ -19,6 +19,7 @@ def detail_url(genre_id):
 
 
 def create_genre(**params):
+    """Create and return a genre"""
     defaults = {
         "name": "Genre Name"
     }
@@ -34,7 +35,7 @@ class PublicGenreApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_auth_required(self):
+    def test_auth_required_for_genre(self):
         """Test auth is required to call API."""
         res = self.client.get(GENRE_URL)
 

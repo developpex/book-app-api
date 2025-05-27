@@ -15,7 +15,7 @@ from book.models import (
 from book.serializers import (
     BookSerializer, BookDetailSerializer
 )
-from catalog.models import Genre
+from catalog.models import Genre, Author
 
 BOOK_URL = reverse("book:book-list")
 
@@ -348,3 +348,152 @@ class PrivateBookAPITests(TestCase):
 
         book.refresh_from_db()
         self.assertEqual(book.genres.count(), 0)
+
+    def test_create_book_with_new_authors(self):
+        """Test creating a book with new authors"""
+        payload = {
+            "title": "New book title",
+            "link": "https://example.com/new-book.pdf",
+            "description": "New book description",
+            "price": Decimal("2.50"),
+            "authors": [
+                {"name": "Author_one"},
+                {"name": "Author_two"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        books = Book.objects.filter(user=self.user)
+        self.assertEqual(books.count(), 1)
+
+        book = books[0]
+        self.assertEqual(book.authors.count(), 2)
+
+        for author in payload["authors"]:
+            author_exist = book.authors.filter(
+                name=author["name"].strip().title()
+            ).exists()
+            self.assertTrue(author_exist)
+
+    def test_create_book_with_existing_authors(self):
+        """Test Creating a recipe with an existing author"""
+        fantasy_author = Author.objects.create(name="Author_One")
+        payload = {
+            "title": "New book title",
+            "link": "https://example.com/new-book.pdf",
+            "description": "New book description",
+            "price": Decimal("2.50"),
+            "authors": [
+                {"name": "Author_One"},
+                {"name": "Author_Two"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        books = Book.objects.filter(user=self.user)
+        self.assertEqual(books.count(), 1)
+
+        book = books[0]
+        self.assertEqual(book.authors.count(), 2)
+        self.assertIn(fantasy_author, book.authors.all())
+
+        for author in payload["authors"]:
+            author_exist = book.authors.filter(
+                name=author["name"].strip().title()
+            ).exists()
+            self.assertTrue(author_exist)
+
+    def test_author_name_normalization_on_book_create(self):
+        """Test that author names are normalized on creation."""
+        payload = {
+            "title": "Normalize Test Book",
+            "link": "https://example.com/book.pdf",
+            "description": "Testing author normalization",
+            "price": Decimal("3.00"),
+            "authors": [
+                {"name": "  author_one  "},
+                {"name": "AUTHOR_TWO"},
+                {"name": "AuthOr ONe"}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        expected_names = ["Author_One", "Author_Two", "Author One"]
+        for name in expected_names:
+            exists = Author.objects.filter(name=name).exists()
+            self.assertTrue(exists)
+
+    def test_reuse_normalized_author(self):
+        """Test that existing normalized author is reused."""
+        Author.objects.create(name="Author_One")
+
+        payload = {
+            "title": "Another Book",
+            "link": "https://example.com/book.pdf",
+            "description": "Reuse author test",
+            "price": Decimal("5.00"),
+            "authors": [
+                {"name": "  Author ONE "}
+            ]
+        }
+
+        res = self.client.post(BOOK_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Author.objects.filter(name__iexact="Author One").count(), 1)
+
+    def test_create_author_on_update(self):
+        """Test creating a author on an update of the book"""
+        book = create_book(user=self.user)
+        payload = {
+            "authors": [{"name": "Author_One"}]
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        new_author = Author.objects.get(name="Author_One")
+        self.assertIn(new_author, book.authors.all())
+
+    def test_get_existing_author_on_update(self):
+        """Test getting existing author when updating a book"""
+        author = Author.objects.create(name="Author_one")
+        book = create_book(user=self.user)
+        book.authors.add(author)
+
+        new_author = Author.objects.create(name="Author_Two")
+        payload = {
+            "authors": [{"name": "Author_Two"}]
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        book.refresh_from_db()
+        self.assertIn(new_author, book.authors.all())
+        self.assertNotIn(author, book.authors.all())
+
+    def test_clear_book_authors(self):
+        """Test clearing a recipes authors"""
+        author = Author.objects.create(name="Author_One")
+        book = create_book(user=self.user)
+        book.authors.add(author)
+
+        payload = {
+            "authors": []
+        }
+
+        url = detail_url(book.id)
+        res = self.client.patch(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        book.refresh_from_db()
+        self.assertEqual(book.authors.count(), 0)
